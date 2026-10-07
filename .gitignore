@@ -1,0 +1,14 @@
+# Dependencies and build output
+node_modules/
+
+# Anything this repo never needs to publish
+*.bak
+*.log
+*.tgz
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/

@@ -1,0 +1,7 @@
+# DSH bundle patch: inserts this package into a profile's layer stack as one
+# Loader entry. The client-modules scan then turns the package's `dsh.client`
+# declaration into a served browser bundle — that is the half that actually
+# freezes the reading column.
+- insert:
+    - id: freeze-content-on-window-resize
+      name: freeze-content-on-window-resize

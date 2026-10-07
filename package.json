@@ -1,0 +1,49 @@
+{
+  "name": "freeze-content-on-window-resize",
+  "version": "1.0.0",
+  "description": "DSH Web GUI plugin: freeze the conversation reading column and keep your reading position when the window is resized.",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "conversation",
+    "reading",
+    "resize",
+    "layout"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib",
+    "client",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "author": "nnnanann",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nnnanann/freeze-content-on-window-resize.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nnnanann/freeze-content-on-window-resize/issues"
+  },
+  "homepage": "https://github.com/nnnanann/freeze-content-on-window-resize#readme"
+}
