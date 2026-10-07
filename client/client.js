@@ -34,8 +34,8 @@ window.__ModuleLoader__.load({
 
 		//#region constants
 		var NAME = "freeze-content-on-window-resize";
-		/** Bumped on every behavior change: the boot stamp records which build the page runs. */
-		var REVISION = "1.0.0";
+		/** `<package version>+<build>`; the boot stamp records which build the page runs. */
+		var REVISION = "1.0.0+4";
 		var STORE_KEY = "freeze-content-on-window-resize:config";
 		/** The key the same setting used before this package was renamed. */
 		var LEGACY_STORE_KEY = "dsh-stable-reading:config";
@@ -67,6 +67,87 @@ window.__ModuleLoader__.load({
 			width: 0,
 			keepPosition: true,
 			showControl: true
+		};
+
+		/** Locale namespace this plugin's panel copy registers under. */
+		var NS = NAME;
+		/** Page-scoped marker: this page session has already registered the namespace. */
+		var LOCALE_FLAG = "__freezeContentOnWindowResizeLocale";
+		/** Copy for both shipped languages; Chinese is also the built-in fallback. */
+		var DICTIONARIES = {
+			zh: {
+				title: "固定窗口缩放内容",
+				pill: "固定窗口缩放内容设置（Alt+Shift+L 切换锁定，Alt+Shift+W 换宽度）",
+				lock: "锁定内容宽度",
+				width: "宽度",
+				keep: "保持阅读位置",
+				show: "显示此控件",
+				reset: "恢复默认",
+				hint: "锁定后换行不再随窗口变化；窗口更窄时改为横向滚动。",
+				boot: "已锁定阅读列",
+				bootOff: "宽度锁定已关闭"
+			},
+			en: {
+				title: "Freeze content on window resize",
+				pill: "Freeze content on window resize — settings (Alt+Shift+L toggles the lock, Alt+Shift+W cycles widths)",
+				lock: "Lock content width",
+				width: "Width",
+				keep: "Keep reading position",
+				show: "Show this control",
+				reset: "Reset",
+				hint: "Locking stops the text from re-wrapping; a narrower window scrolls horizontally instead.",
+				boot: "locked reading columns",
+				bootOff: "width lock off"
+			}
+		};
+
+		/**
+		 * The active copy. The host's locale service, when the host has one, replaces
+		 * the built-in dictionary through `bind`; without it — or when that language
+		 * has no dictionary here — the panel stays Chinese and nothing else changes.
+		 */
+		var copy = {
+			id: null,
+			bound: false,
+			translate: null,
+			/** Why the panel copy is what it is; recorded in the boot stamp. */
+			state: "pending",
+			t: function (key) {
+				if (copy.translate !== null) {
+					var translated = copy.translate(key);
+					if (typeof translated === "string" && translated !== "" && translated !== key) return translated;
+				}
+				var fallback = DICTIONARIES.zh[key];
+				return typeof fallback === "string" ? fallback : key;
+			},
+			bind: function (locale) {
+				var snapshot = null;
+				try {
+					snapshot = locale.getSnapshot();
+				} catch (error) {
+					snapshot = null;
+				}
+				var id = snapshot !== null && typeof snapshot.active === "string" ? snapshot.active : null;
+				var translate = null;
+				try {
+					translate = locale.bind(NS);
+				} catch (error) {
+					translate = null;
+				}
+				var probe = typeof translate === "function" ? translate("title") : null;
+				copy.id = id;
+				// A passthrough of the key means this language has no dictionary: keep
+				// the built-in copy rather than showing raw keys in the panel.
+				if (typeof probe !== "string" || probe === "" || probe === "title") {
+					copy.translate = null;
+					copy.bound = false;
+					copy.state = "no-dictionary";
+					return;
+				}
+				copy.translate = translate;
+				copy.bound = true;
+				copy.state = "bound";
+			}
 		};
 		//#endregion
 
@@ -733,18 +814,18 @@ window.__ModuleLoader__.load({
 				controlEl.id = CONTROL_ID;
 				controlEl.setAttribute("data-freeze-content-on-window-resize", "control");
 				controlEl.innerHTML =
-					'<button type="button" class="fcwr-pill" aria-expanded="false" title="固定窗口缩放内容设置（Alt+Shift+L 切换锁定，Alt+Shift+W 换宽度）">🔒</button>' +
-					'<div class="fcwr-panel" role="dialog" aria-label="固定窗口缩放内容设置" hidden>' +
-					'<p class="fcwr-title">固定窗口缩放内容</p>' +
-					'<div class="fcwr-row"><label for="fcwr-lock">锁定内容宽度</label><input id="fcwr-lock" type="checkbox"></div>' +
-					'<div class="fcwr-width"><label for="fcwr-width">宽度</label><input id="fcwr-width" type="number" min="' + MIN_WIDTH + '" max="' + MAX_WIDTH + '" step="1"> px</div>' +
+					'<button type="button" class="fcwr-pill" aria-expanded="false" title="' + copy.t("pill") + '">🔒</button>' +
+					'<div class="fcwr-panel" role="dialog" aria-label="' + copy.t("title") + '" hidden>' +
+					'<p class="fcwr-title">' + copy.t("title") + '</p>' +
+					'<div class="fcwr-row"><label for="fcwr-lock">' + copy.t("lock") + '</label><input id="fcwr-lock" type="checkbox"></div>' +
+					'<div class="fcwr-width"><label for="fcwr-width">' + copy.t("width") + '</label><input id="fcwr-width" type="number" min="' + MIN_WIDTH + '" max="' + MAX_WIDTH + '" step="1"> px</div>' +
 					'<div class="fcwr-presets">' + PRESETS.map(function (value) {
 						return '<button type="button" class="fcwr-preset" data-width="' + value + '">' + value + '</button>';
 					}).join("") + '</div>' +
-					'<div class="fcwr-row"><label for="fcwr-keep">保持阅读位置</label><input id="fcwr-keep" type="checkbox"></div>' +
-					'<div class="fcwr-row"><label for="fcwr-show">显示此控件</label><input id="fcwr-show" type="checkbox"></div>' +
-					'<div class="fcwr-actions"><button type="button" class="fcwr-reset">恢复默认</button></div>' +
-					'<div class="fcwr-hint">锁定后换行不再随窗口变化；窗口更窄时改为横向滚动。</div>' +
+					'<div class="fcwr-row"><label for="fcwr-keep">' + copy.t("keep") + '</label><input id="fcwr-keep" type="checkbox"></div>' +
+					'<div class="fcwr-row"><label for="fcwr-show">' + copy.t("show") + '</label><input id="fcwr-show" type="checkbox"></div>' +
+					'<div class="fcwr-actions"><button type="button" class="fcwr-reset">' + copy.t("reset") + '</button></div>' +
+					'<div class="fcwr-hint">' + copy.t("hint") + '</div>' +
 					'</div>';
 				document.body.appendChild(controlEl);
 
@@ -836,6 +917,21 @@ window.__ModuleLoader__.load({
 					presetButtons[i].dataset.active = String(px(presetButtons[i].dataset.width) === config.width);
 				}
 			}
+
+			/** Rebuild the panel in the newly active language, keeping it open if it was. */
+			function relabel() {
+				if (controlEl === null || !controlEl.isConnected) return;
+				var wasOpen = panelEl !== null && panelEl.hidden === false;
+				controlEl.remove();
+				controlEl = null;
+				panelEl = null;
+				pillEl = null;
+				syncControl();
+				if (wasOpen && panelEl !== null && pillEl !== null) {
+					panelEl.hidden = false;
+					pillEl.setAttribute("aria-expanded", "true");
+				}
+			}
 			//#endregion
 
 			function start() {
@@ -891,7 +987,8 @@ window.__ModuleLoader__.load({
 						columns: states.map(function (state) {
 							return {
 								primary: state.primary,
-								width: state.appliedWidth,
+								/** The width this column is locked to; 0 means it is not locked. */
+								width: state.lockedWidth,
 								anchor: state.anchor === null ? null : state.anchor.key
 							};
 						})
@@ -900,7 +997,8 @@ window.__ModuleLoader__.load({
 				realign: function () {
 					columns();
 					restoreAll();
-				}
+				},
+				relabel: relabel
 			};
 		}
 		//#endregion
@@ -932,18 +1030,28 @@ window.__ModuleLoader__.load({
 				} catch (error) {
 					/* a frozen window object loses the global, not the plugin */
 				}
-				// A boot stamp: which build this page is running, and what it locked.
-				writeJson(BOOT_KEY, {
-					revision: REVISION,
-					at: new Date().toISOString(),
-					href: String(window.location.href),
-					columns: status.columns
-				});
+				// A boot stamp: which build this page is running, what it locked, and
+				// which copy the panel uses. Rewritten once the locale service answers.
+				function stamp() {
+					writeJson(BOOT_KEY, {
+						revision: REVISION,
+						at: new Date().toISOString(),
+						href: String(window.location.href),
+						locale: copy.id,
+						copy: copy.bound ? "locale" : "builtin",
+						copyState: copy.state,
+						lockWidth: runtime === null ? null : runtime.status().lockWidth,
+						columns: runtime === null ? [] : runtime.status().columns
+					});
+				}
+
+				stamp();
 				try {
-					var widths = status.columns.map(function (column) {
-						return column.width + "px" + (column.primary ? "(主)" : "");
+					var summary = status.columns.map(function (column) {
+						// A non-positive width is "this column is not locked".
+						return (column.width > 0 ? column.width + "px" : "off") + (column.primary ? " (primary)" : "");
 					}).join(" / ");
-					window.console.info("[freeze-content-on-window-resize] " + REVISION + " 锁定列宽 " + widths + "，锁定开关=" + status.lockWidth + "，保持阅读位置=" + status.keepPosition);
+					window.console.info("[" + NAME + "] " + REVISION + " " + (status.lockWidth ? copy.t("boot") + ": " + summary : copy.t("bootOff")));
 				} catch (error) {
 					/* no console is not a failure */
 				}
@@ -952,6 +1060,56 @@ window.__ModuleLoader__.load({
 					ctx.provide("freezeContentOnWindowResize", surface);
 				} catch (error) {
 					/* a host without `provide` loses the surface, not the plugin */
+				}
+
+				// Optional: the host's locale service supplies the panel copy. Absent or
+				// without a dictionary for the active language, the built-in copy stays.
+				if (typeof ctx.inject !== "function") return;
+				try {
+					ctx.inject(["locale"], function (scoped) {
+						try {
+							if (scoped === undefined || scoped === null || scoped.locale === undefined || typeof scoped.locale.register !== "function") {
+								copy.state = "no-service";
+								stamp();
+								return;
+							}
+							// A page session keeps the namespaces it has already registered and
+							// rejects a second registration of the same one. A reload of this
+							// bundle (hot reload, enable/disable) therefore skips the dictionary
+							// and binds what the page already holds; changed copy needs a page
+							// reload, which is what a real install or update does anyway.
+							if (window[LOCALE_FLAG] !== NS) {
+								try {
+									scoped.locale.register(NS, DICTIONARIES);
+								} catch (error) {
+									/* already registered in this page session */
+								}
+								window[LOCALE_FLAG] = NS;
+							}
+							copy.state = "registered";
+							copy.bind(scoped.locale);
+							if (runtime !== null) runtime.relabel();
+							stamp();
+							var unsubscribe = scoped.locale.subscribe(function () {
+								copy.bind(scoped.locale);
+								if (runtime !== null) runtime.relabel();
+								stamp();
+							});
+							if (typeof ctx.effect === "function") {
+								ctx.effect(function () {
+									return function () {
+										if (typeof unsubscribe === "function") unsubscribe();
+									};
+								}, "freeze-content-on-window-resize: locale subscription");
+							}
+						} catch (error) {
+							copy.state = "error: " + String(error !== null && error !== undefined && error.message !== undefined ? error.message : error);
+							stamp();
+						}
+					});
+				} catch (error) {
+					copy.state = "inject-failed: " + String(error !== null && error !== undefined && error.message !== undefined ? error.message : error);
+					stamp();
 				}
 			}
 
@@ -969,7 +1127,7 @@ window.__ModuleLoader__.load({
 								id: NAME,
 								order: 90,
 								label: function () {
-									return "固定窗口缩放内容";
+									return copy.t("title");
 								}
 							}, function () {
 								return null;
